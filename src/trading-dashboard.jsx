@@ -19,8 +19,14 @@ const SECTORS = [
     { symbol:"META", yahooSymbol:"META",    type:"stock",  label:"Meta" },
     { symbol:"AMZN", yahooSymbol:"AMZN",    type:"stock",  label:"Amazon" },
     { symbol:"GOOGL",yahooSymbol:"GOOGL",   type:"stock",  label:"Alphabet" },
+    { symbol:"TSLA", yahooSymbol:"TSLA",    type:"stock",  label:"Tesla" },
     { symbol:"NOW",  yahooSymbol:"NOW",     type:"stock",  label:"ServiceNow" },
     { symbol:"DUOL", yahooSymbol:"DUOL",    type:"stock",  label:"Duolingo" },
+  ]},
+  { label:"Semiconductors", icon:"◈", tickers:[
+    { symbol:"MU",   yahooSymbol:"MU",      type:"stock",  label:"Micron" },
+    { symbol:"SNDK", yahooSymbol:"SNDK",    type:"stock",  label:"SanDisk" },
+    { symbol:"AVGO", yahooSymbol:"AVGO",    type:"stock",  label:"Broadcom" },
   ]},
   { label:"Quantum & Space", icon:"◈", tickers:[
     { symbol:"IONQ", yahooSymbol:"IONQ",    type:"stock",  label:"IonQ" },
@@ -28,6 +34,7 @@ const SECTORS = [
     { symbol:"NBIS", yahooSymbol:"NBIS",    type:"stock",  label:"Nebius" },
     { symbol:"RKLB", yahooSymbol:"RKLB",    type:"stock",  label:"Rocket Lab" },
     { symbol:"PLTR", yahooSymbol:"PLTR",    type:"stock",  label:"Palantir" },
+    { symbol:"MNTS", yahooSymbol:"MNTS",    type:"stock",  label:"Momentus" },
   ]},
   { label:"Biotech & Health", icon:"◈", tickers:[
     { symbol:"HIMS", yahooSymbol:"HIMS",    type:"stock",  label:"Hims & Hers" },
@@ -36,6 +43,10 @@ const SECTORS = [
     { symbol:"COIN", yahooSymbol:"COIN",    type:"stock",  label:"Coinbase" },
     { symbol:"HOOD", yahooSymbol:"HOOD",    type:"stock",  label:"Robinhood" },
     { symbol:"SOFI", yahooSymbol:"SOFI",    type:"stock",  label:"SoFi" },
+    { symbol:"IREN", yahooSymbol:"IREN",    type:"stock",  label:"IREN (Crypto Mining)" },
+  ]},
+  { label:"🇨🇦 Canada", icon:"◈", tickers:[
+    { symbol:"DOL",  yahooSymbol:"DOL.TO",  type:"stock",  label:"Dollarama (TSX)" },
   ]},
   { label:"Crypto", icon:"◈", tickers:[
     { symbol:"BTC",  yahooSymbol:"BTC-USD", type:"crypto", label:"Bitcoin" },
