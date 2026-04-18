@@ -630,20 +630,20 @@ function ProtocolCard({ symbol, data, loading }) {
         <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>TOTAL VALUE LOCKED</div>
         <div style={{display:"flex",gap:8}}>
           <div style={{flex:2,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
-            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>CURRENT TVL</div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>CURRENT TVL</div>
             <div style={{fontSize:16,fontWeight:700,color:loading?C.greyDim:C.white}}>
               {loading?"---":fmtUSD(data?.tvl)}
             </div>
           </div>
           <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>7D</div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>7D</div>
             <div style={{fontSize:13,fontWeight:700,
               color:tvlPct7d?parseFloat(tvlPct7d)>=0?C.green:C.red:C.greyDim}}>
               {tvlPct7d?`${parseFloat(tvlPct7d)>=0?"+":""}${tvlPct7d}%`:"---"}
             </div>
           </div>
           <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>30D</div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>30D</div>
             <div style={{fontSize:13,fontWeight:700,
               color:tvlPct30d?parseFloat(tvlPct30d)>=0?C.green:C.red:C.greyDim}}>
               {tvlPct30d?`${parseFloat(tvlPct30d)>=0?"+":""}${tvlPct30d}%`:"---"}
@@ -666,7 +666,7 @@ function ProtocolCard({ symbol, data, loading }) {
             ].filter(x=>x.val).map(({label,val})=>(
               <div key={label} style={{flex:1,minWidth:70,background:C.bgDeep,
                 border:`1px solid ${C.borderBright}`,padding:"6px 8px",textAlign:"center"}}>
-                <div style={{fontSize:9,color:C.greyDim,letterSpacing:1,marginBottom:3}}>{label}</div>
+                <div style={{fontSize:9,color:C.grey,letterSpacing:1,marginBottom:3}}>{label}</div>
                 <div style={{fontSize:12,fontWeight:700,color:C.green}}>{fmtUSD(val)}</div>
               </div>
             ))}
