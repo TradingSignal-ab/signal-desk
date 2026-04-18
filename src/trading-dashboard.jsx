@@ -400,7 +400,7 @@ function WeeklyMACDPanel({ wm }) {
       <div style={{display:"flex",gap:8}}>
         {[["MACD",m],["SIGNAL",s],["HIST",h]].map(([lbl,val])=>(
           <div key={lbl} style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"5px 8px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:3}}>{lbl}</div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:3}}>{lbl}</div>
             <div style={{fontSize:11,color:val!=null?(val>=0?C.green:C.red):C.greyDim,fontWeight:700}}>
               {val!=null?val.toFixed(4):"---"}
             </div>
@@ -428,7 +428,7 @@ function DailyMACDPanel({ macd }) {
       <div style={{display:"flex",gap:8}}>
         {[["MACD",m],["SIG",s],["HIST",h]].map(([lbl,val])=>(
           <div key={lbl} style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"5px 8px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:3}}>{lbl}</div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:3}}>{lbl}</div>
             <div style={{fontSize:11,color:val!=null?(val>=0?C.greenDim:"#ff6644"):C.greyDim,fontWeight:700}}>
               {val!=null?val.toFixed(3):"---"}
             </div>
@@ -627,7 +627,7 @@ function ProtocolCard({ symbol, data, loading }) {
 
       {/* TVL */}
       <div>
-        <div style={{fontSize:10,color:C.greyDim,letterSpacing:2,marginBottom:6}}>TOTAL VALUE LOCKED</div>
+        <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>TOTAL VALUE LOCKED</div>
         <div style={{display:"flex",gap:8}}>
           <div style={{flex:2,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
             <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>CURRENT TVL</div>
@@ -655,7 +655,7 @@ function ProtocolCard({ symbol, data, loading }) {
       {/* Fees & Revenue */}
       {(data?.fees24h||data?.fees30d||data?.revenue24h)&&(
         <div>
-          <div style={{fontSize:10,color:C.greyDim,letterSpacing:2,marginBottom:6}}>FEES & REVENUE</div>
+          <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>FEES & REVENUE</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[
               {label:"FEES 24H",  val:data?.fees24h},
