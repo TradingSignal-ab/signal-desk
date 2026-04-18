@@ -61,7 +61,7 @@ const SECTORS = [
 // ── ON-CHAIN METRICS CONFIG ───────────────────────────────────────────────────
 const ONCHAIN_SECTORS = [
   { label:"L1 Chains", icon:"◈", protocols:[
-    "ETH","SOL","AVAX","BNB","TRX","SUI","APT","NEAR","SEI","DOT","ADA","HBAR","XRP","ALGO",
+    "ETH","SOL","AVAX","BNB","TRX","SUI","APT","NEAR","SEI","ADA","HBAR","XRP",
   ]},
   { label:"DeFi Protocols", icon:"◈", protocols:[
     "HYPE","LINK","ONDO","MYX","SYRUP","W","AXL",
@@ -78,11 +78,9 @@ const PROTOCOL_META = {
   APT:   { name:"Aptos",       token:"APT",   category:"L1 Chain",  color:C.greenDim },
   NEAR:  { name:"NEAR",        token:"NEAR",  category:"L1 Chain",  color:C.green },
   SEI:   { name:"Sei",         token:"SEI",   category:"L1 Chain",  color:C.red },
-  DOT:   { name:"Polkadot",    token:"DOT",   category:"L1 Chain",  color:"#e6007a" },
   ADA:   { name:"Cardano",     token:"ADA",   category:"L1 Chain",  color:C.cyan },
   HBAR:  { name:"Hedera",      token:"HBAR",  category:"L1 Chain",  color:C.greenDim },
   XRP:   { name:"XRP Ledger",  token:"XRP",   category:"L1 Chain",  color:C.cyan },
-  ALGO:  { name:"Algorand",    token:"ALGO",  category:"L1 Chain",  color:C.grey },
   HYPE:  { name:"Hyperliquid", token:"HYPE",  category:"Perp DEX",  color:C.green },
   LINK:  { name:"Chainlink",   token:"LINK",  category:"Oracle",    color:C.cyan },
   ONDO:  { name:"Ondo Finance",token:"ONDO",  category:"RWA",       color:C.cyan },
