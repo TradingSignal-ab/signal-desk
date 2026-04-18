@@ -6,8 +6,10 @@ const C = {
   red:"#ff2244",yellow:"#ffe500",
   white:"#e8ffe8",grey:"#7aab7a",greyDim:"#3a5a3a",
   border:"#0f2a0f",borderBright:"#1a4a1a",
+  cyan:"#00ccff",
 };
 
+// ── SIGNALS TAB CONFIG ────────────────────────────────────────────────────────
 const SECTORS = [
   { label:"ETFs & Macro", icon:"◈", tickers:[
     { symbol:"SPY",  yahooSymbol:"SPY",     type:"etf",    label:"S&P 500 ETF" },
@@ -43,7 +45,7 @@ const SECTORS = [
     { symbol:"COIN", yahooSymbol:"COIN",    type:"stock",  label:"Coinbase" },
     { symbol:"HOOD", yahooSymbol:"HOOD",    type:"stock",  label:"Robinhood" },
     { symbol:"SOFI", yahooSymbol:"SOFI",    type:"stock",  label:"SoFi" },
-    { symbol:"IREN", yahooSymbol:"IREN",    type:"stock",  label:"IREN (Crypto Mining)" },
+    { symbol:"IREN", yahooSymbol:"IREN",    type:"stock",  label:"IREN" },
   ]},
   { label:"🇨🇦 Canada", icon:"◈", tickers:[
     { symbol:"DOL",  yahooSymbol:"DOL.TO",  type:"stock",  label:"Dollarama (TSX)" },
@@ -56,8 +58,43 @@ const SECTORS = [
   ]},
 ];
 
-const ALL_TICKERS = SECTORS.flatMap(s => s.tickers);
-const EMA_PERIODS = [5, 13, 21, 34, 50];
+// ── ON-CHAIN METRICS CONFIG ───────────────────────────────────────────────────
+const ONCHAIN_SECTORS = [
+  { label:"L1 Chains", icon:"◈", protocols:[
+    "ETH","SOL","AVAX","BNB","TRX","SUI","APT","NEAR","SEI","DOT","ADA","HBAR","XRP","ALGO",
+  ]},
+  { label:"DeFi Protocols", icon:"◈", protocols:[
+    "HYPE","LINK","ONDO","MYX","SYRUP","W","AXL",
+  ]},
+];
+
+const PROTOCOL_META = {
+  ETH:   { name:"Ethereum",    token:"ETH",   category:"L1 Chain",  color:C.cyan },
+  SOL:   { name:"Solana",      token:"SOL",   category:"L1 Chain",  color:C.green },
+  AVAX:  { name:"Avalanche",   token:"AVAX",  category:"L1 Chain",  color:C.red },
+  BNB:   { name:"BNB Chain",   token:"BNB",   category:"L1 Chain",  color:C.yellow },
+  TRX:   { name:"Tron",        token:"TRX",   category:"L1 Chain",  color:C.red },
+  SUI:   { name:"Sui",         token:"SUI",   category:"L1 Chain",  color:C.cyan },
+  APT:   { name:"Aptos",       token:"APT",   category:"L1 Chain",  color:C.greenDim },
+  NEAR:  { name:"NEAR",        token:"NEAR",  category:"L1 Chain",  color:C.green },
+  SEI:   { name:"Sei",         token:"SEI",   category:"L1 Chain",  color:C.red },
+  DOT:   { name:"Polkadot",    token:"DOT",   category:"L1 Chain",  color:"#e6007a" },
+  ADA:   { name:"Cardano",     token:"ADA",   category:"L1 Chain",  color:C.cyan },
+  HBAR:  { name:"Hedera",      token:"HBAR",  category:"L1 Chain",  color:C.greenDim },
+  XRP:   { name:"XRP Ledger",  token:"XRP",   category:"L1 Chain",  color:C.cyan },
+  ALGO:  { name:"Algorand",    token:"ALGO",  category:"L1 Chain",  color:C.grey },
+  HYPE:  { name:"Hyperliquid", token:"HYPE",  category:"Perp DEX",  color:C.green },
+  LINK:  { name:"Chainlink",   token:"LINK",  category:"Oracle",    color:C.cyan },
+  ONDO:  { name:"Ondo Finance",token:"ONDO",  category:"RWA",       color:C.cyan },
+  MYX:   { name:"MYX Finance", token:"MYX",   category:"Perp DEX",  color:C.greenDim },
+  SYRUP: { name:"Syrup",       token:"SYRUP", category:"Lending",   color:C.yellow },
+  W:     { name:"Wormhole",    token:"W",     category:"Bridge",    color:C.grey },
+  AXL:   { name:"Axelar",      token:"AXL",   category:"Bridge",    color:C.cyan },
+};
+
+const ALL_TICKERS  = SECTORS.flatMap(s => s.tickers);
+const EMA_PERIODS  = [5, 13, 21, 34, 50];
+const ALL_PROTOCOLS = ONCHAIN_SECTORS.flatMap(s => s.protocols);
 
 // ── MATH ──────────────────────────────────────────────────────────────────────
 function calcEMA(prices, period) {
@@ -129,6 +166,26 @@ function getSignal(price, emas, rsi, change, macd, wm) {
   return               { label:"STRONG SELL",  color:C.red,      score:s };
 }
 
+function getFundamentalScore(data) {
+  if (!data || !data.tvl) return { label:"NO DATA", color:C.greyDim };
+  let score = 0;
+  // TVL trend
+  if (data.tvl30dAgo && data.tvl > data.tvl30dAgo) score += 2;
+  else if (data.tvl30dAgo && data.tvl < data.tvl30dAgo) score -= 2;
+  if (data.tvl7dAgo && data.tvl > data.tvl7dAgo) score += 1;
+  else if (data.tvl7dAgo && data.tvl < data.tvl7dAgo) score -= 1;
+  // Revenue/fees
+  if (data.fees24h && data.fees24h > 0) score += 1;
+  if (data.revenue24h && data.revenue24h > 0) score += 1;
+  if (data.fees30d && data.fees7d && (data.fees7d / 7) > (data.fees30d / 30)) score += 1;
+
+  if (score >= 4)  return { label:"STRONG",  color:C.green };
+  if (score >= 2)  return { label:"GROWING", color:C.greenDim };
+  if (score >= 0)  return { label:"STABLE",  color:C.yellow };
+  if (score >= -2) return { label:"CAUTION", color:"#ff6644" };
+  return                  { label:"WEAK",    color:C.red };
+}
+
 function isTradingWindow() {
   const now = new Date();
   const mst = (now.getUTCHours() - 6) * 60 + now.getUTCMinutes();
@@ -147,12 +204,26 @@ function fmtEMA(e, type) {
   return `$${e.toFixed(2)}`;
 }
 
+function fmtUSD(n) {
+  if (!n && n !== 0) return "---";
+  if (n >= 1e9) return `$${(n/1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n/1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n/1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+function fmtPct(a, b) {
+  if (!a || !b || b === 0) return null;
+  return (((a - b) / b) * 100).toFixed(1);
+}
+
 function getMockData(symbol) {
   const bases = {
     SPY:532,QQQ:448,BTC:83200,ETH:3180,SOL:142,XRP:0.52,
-    NVDA:875,MSFT:415,META:512,AMZN:188,GOOGL:172,NOW:780,DUOL:220,
-    IONQ:8.4,RGTI:1.2,NBIS:14,RKLB:22,PLTR:24,
-    HIMS:12,COIN:215,HOOD:18,SOFI:9,
+    NVDA:875,MSFT:415,META:512,AMZN:188,GOOGL:172,NOW:780,DUOL:220,TSLA:240,
+    IONQ:8.4,RGTI:1.2,NBIS:14,RKLB:22,PLTR:24,MNTS:6,
+    HIMS:12,COIN:215,HOOD:18,SOFI:9,IREN:8,DOL:130,
+    MU:112,SNDK:45,AVGO:1320,
   };
   const base = bases[symbol] || 10;
   const n = () => (Math.random() - 0.5) * base * 0.003;
@@ -190,237 +261,37 @@ function getAlerts(symbol, price, rsi, macd, wm, change, emas, ema200) {
 // ── YAHOO FINANCE ─────────────────────────────────────────────────────────────
 async function fetchYahoo(yahooSymbol) {
   const url = `/api/yahoo?symbol=${yahooSymbol}`;
-  const res  = await fetch(url);
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`);
   const data = await res.json();
-  console.log(`[Yahoo] ${yahooSymbol}:`, JSON.stringify(data).slice(0, 200));
   const result = data?.chart?.result?.[0];
   if (!result) throw new Error(`No data for ${yahooSymbol}`);
   const quote   = result.indicators?.quote?.[0];
   const closes  = quote?.close  || [];
   const vols    = quote?.volume || [];
   const opens   = quote?.open   || [];
-  const valid   = closes
-    .map((c, i) => ({ c, v:vols[i]||0, o:opens[i]||c }))
-    .filter(d => d.c != null && !isNaN(d.c));
+  const valid   = closes.map((c,i)=>({c,v:vols[i]||0,o:opens[i]||c})).filter(d=>d.c!=null&&!isNaN(d.c));
   if (valid.length < 10) throw new Error(`Insufficient data for ${yahooSymbol}`);
-  const prices  = valid.map(d => d.c);
-  const volumes = valid.map(d => d.v);
-  const last    = valid[valid.length - 1];
-  const price   = last.c;
-  const open    = last.o;
-  const change  = ((price - open) / open) * 100;
-  return { price, prices, volumes, change };
+  const prices  = valid.map(d=>d.c);
+  const volumes = valid.map(d=>d.v);
+  const last    = valid[valid.length-1];
+  return { price:last.c, prices, volumes, change:((last.c-last.o)/last.o)*100 };
 }
 
-
-// ── LEARN PANEL ───────────────────────────────────────────────────────────────
-const LEARN_SECTIONS = [
-  {
-    title: "MACD — Momentum Explained",
-    color: C.green,
-    content: [
-      {
-        heading: "What is MACD?",
-        text: "MACD measures whether short-term price momentum is faster or slower than long-term momentum. It answers one question: is buying pressure accelerating or fading? Nothing more.",
-      },
-      {
-        heading: "The Three Numbers",
-        text: "MACD Line = 12-day EMA minus 26-day EMA. Positive means short-term is faster than long-term (bullish). Negative means short-term is slower (bearish). Signal Line = a 9-day smoothing of the MACD — think of it as a slow version. Histogram = MACD minus Signal. This is the most important number. When it crosses zero, momentum is shifting. Positive and growing = accelerating up. Positive but shrinking = momentum slowing.",
-      },
-      {
-        heading: "Daily vs Weekly MACD",
-        text: "Daily MACD (12,26,9) tells you what momentum is doing RIGHT NOW. Weekly MACD (6,20,9) tells you what the overall trend direction is. Think of weekly as the highway — is it going uphill or downhill? Daily is your speed on that highway. You want to drive fast (daily bullish) on an uphill highway (weekly risk on).",
-      },
-      {
-        heading: "The Four Setups",
-        text: "RISK ON + Daily BULLISH = Highest confidence long entry. RISK OFF + Daily BULLISH = Bounce in a downtrend — be cautious. RISK OFF + Daily BEARISH = Strong short or put signal. RISK ON + Daily BEARISH = Pullback in uptrend — watch for entry opportunity.",
-      },
-    ],
-  },
-  {
-    title: "RSI — Overbought & Oversold",
-    color: C.yellow,
-    content: [
-      {
-        heading: "What is RSI?",
-        text: "RSI measures how fast and how much price has moved recently on a scale of 0 to 100. High RSI means price moved up fast recently. Low RSI means price moved down hard. It tells you if a move has gone too far too fast.",
-      },
-      {
-        heading: "The Key Levels",
-        text: "Below 30 = OVERSOLD. Price has dropped hard — potential bounce zone. Good area to look for long entries or close short positions. Above 65 = OVERBOUGHT. Price has run fast — momentum may be exhausted. Good area to look for short entries or take profits on longs. 30-65 = NEUTRAL. No extreme reading, trend continuation likely.",
-      },
-      {
-        heading: "How This Dashboard Uses RSI",
-        text: "RSI below 30 adds +2 to the signal score — a strong buy input. RSI above 65 subtracts 2 — a strong sell input. RSI below 50 adds +0.5 (mild bullish lean). RSI above 50 subtracts 0.5 (mild bearish lean). Combined with MACD and EMA alignment, RSI helps confirm entries rather than acting alone.",
-      },
-      {
-        heading: "Important Note",
-        text: "Overbought doesn't mean sell immediately — a strong trend can stay overbought for weeks. Oversold doesn't mean buy immediately — a weak stock can stay oversold for months. Use RSI as a timing tool alongside MACD, not as a standalone signal.",
-      },
-    ],
-  },
-  {
-    title: "EMAs — Trend Direction",
-    color: "#00ccff",
-    content: [
-      {
-        heading: "What is an EMA?",
-        text: "An Exponential Moving Average is the average closing price over a set number of days, with recent days weighted more heavily than older days. It smooths out daily noise so you can see the actual trend direction.",
-      },
-      {
-        heading: "The EMA Stack",
-        text: "EMA5 = very short term, reacts to moves within a week. EMA13 = short term, about 2-3 weeks. EMA21 = medium term, about a month. EMA34 = medium-long term. EMA50 = longer term trend, 2-3 months. EMA200 = long-term trend, roughly one year. Price above an EMA = bullish for that timeframe. Price below = bearish.",
-      },
-      {
-        heading: "EMA Alignment Ring",
-        text: "The ring on each card shows how many of the 5 signal EMAs price is currently above. 5/5 fully green = all timeframes bullish. 0/5 fully red = all timeframes bearish. Mixed readings mean the trend is transitioning. A 5/5 reading with RISK OFF weekly MACD is a warning — it means price bounced but the bigger trend is still down.",
-      },
-      {
-        heading: "EMA200 — The Institutional Level",
-        text: "The EMA200 is watched by every major fund and institution. Price above EMA200 = long-term bull market. Price below EMA200 = long-term bear market. When price tests EMA200 from above, it often acts as support. From below, it acts as resistance. This dashboard alerts you when price gets within 0.5% of EMA200 — that is a key decision point.",
-      },
-    ],
-  },
-  {
-    title: "Signal Score — How Cards Are Rated",
-    color: C.greenDim,
-    content: [
-      {
-        heading: "How the Score Works",
-        text: "Every card calculates a score from -5 to +5 based on all indicators combined. The score determines the signal badge — STRONG BUY, BUY, NEUTRAL, SELL, or STRONG SELL.",
-      },
-      {
-        heading: "Score Breakdown",
-        text: "EMA5 above EMA13 = +1 (else -1). EMA13 above EMA21 = +1 (else -1). RSI below 35 = +2. RSI above 65 = -2. RSI below 50 = +0.5. RSI above 50 = -0.5. Daily MACD histogram positive = +0.5. Daily MACD histogram negative = -0.5. Today's price change above 0.5% = +1. Weekly MACD RISK ON = +1. Weekly MACD RISK OFF = -1.",
-      },
-      {
-        heading: "Signal Thresholds",
-        text: "Score above 2.5 = STRONG BUY. Score 1 to 2.5 = BUY. Score -1 to 1 = NEUTRAL. Score -2.5 to -1 = SELL. Score below -2.5 = STRONG SELL. Note: EMA200 is NOT included in the score — it is a visual reference only and does not affect buy/sell ratings.",
-      },
-      {
-        heading: "How to Use the Score",
-        text: "Use STRONG BUY + RISK ON as your highest confidence long setup. Use STRONG SELL + RISK OFF as your highest confidence short or put setup. NEUTRAL cards are in transition — wait for a clearer signal. Never use the signal alone — always confirm with your own chart read and the macro context.",
-      },
-    ],
-  },
-  {
-    title: "Weekly Regime — The Most Important Filter",
-    color: C.red,
-    content: [
-      {
-        heading: "What is the Weekly Regime?",
-        text: "The weekly regime is determined by the Weekly MACD (6,20,9) — the settings recommended in the tweet you shared. It classifies each ticker as either RISK ON (weekly trend is up) or RISK OFF (weekly trend is down).",
-      },
-      {
-        heading: "RISK ON",
-        text: "Weekly MACD line is above the signal line. The weekly trend is bullish. Long entries are valid when daily signals confirm. This is your green light to look for buying opportunities on that ticker.",
-      },
-      {
-        heading: "RISK OFF",
-        text: "Weekly MACD line is below the signal line. The weekly trend is bearish. Avoid new long entries. Wait for the first weekly close where MACD crosses back above signal — that is your confirmation to re-enter. This is your signal to look for short or put opportunities.",
-      },
-      {
-        heading: "The Macro Banner",
-        text: "The banner at the top of the dashboard shows the weekly regime across your entire watchlist. If more than 55% of tickers are RISK OFF it calls a macro bearish regime — avoid new longs across the board. If more than 55% are RISK ON it confirms a macro bull environment. Mixed readings mean trade selectively on individual ticker signals only.",
-      },
-    ],
-  },
-];
-
-function LearnPanel() {
-  const [openSection, setOpenSection] = useState(null);
-  return (
-    <div style={{
-      background:C.bgDeep, border:`1px solid ${C.borderBright}`,
-      marginBottom:14, overflow:"hidden",
-    }}>
-      {/* Learn header */}
-      <div style={{
-        padding:"12px 18px",
-        borderBottom: openSection !== null ? `1px solid ${C.border}` : "none",
-        fontSize:11, color:C.grey, letterSpacing:3,
-      }}>
-        {"// INDICATOR REFERENCE GUIDE — click any section to expand"}
-      </div>
-
-      {LEARN_SECTIONS.map((section, idx) => {
-        const isOpen = openSection === idx;
-        return (
-          <div key={idx} style={{borderBottom: idx < LEARN_SECTIONS.length-1 ? `1px solid ${C.border}` : "none"}}>
-            {/* Section header */}
-            <button
-              onClick={()=>setOpenSection(isOpen ? null : idx)}
-              style={{
-                width:"100%", background:isOpen?`${section.color}08`:"transparent",
-                border:"none", padding:"12px 18px",
-                display:"flex", justifyContent:"space-between", alignItems:"center",
-                cursor:"pointer", textAlign:"left",
-              }}
-            >
-              <span style={{fontSize:12, color:section.color, fontWeight:700, letterSpacing:2, fontFamily:"monospace"}}>
-                {section.title.toUpperCase()}
-              </span>
-              <span style={{fontSize:14, color:section.color, opacity:0.7}}>
-                {isOpen ? "▲" : "▼"}
-              </span>
-            </button>
-
-            {/* Section content */}
-            {isOpen && (
-              <div style={{padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:14}}>
-                {section.content.map((block, i) => (
-                  <div key={i}>
-                    <div style={{
-                      fontSize:11, color:section.color, letterSpacing:2,
-                      marginBottom:6, fontFamily:"monospace",
-                    }}>
-                      ◈ {block.heading.toUpperCase()}
-                    </div>
-                    <div style={{
-                      fontSize:12, color:C.grey, lineHeight:1.7,
-                      letterSpacing:0.3, fontFamily:"monospace",
-                    }}>
-                      {block.text}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Quick reference table for signal score */}
-                {idx === 1 && (
-                  <div style={{display:"flex",flexDirection:"column",gap:3,marginTop:4}}>
-                    {[
-                      {label:"RISK ON + Daily BULLISH",  result:"HIGHEST CONFIDENCE LONG",   color:C.green},
-                      {label:"RISK OFF + Daily BULLISH", result:"BOUNCE IN DOWNTREND — WAIT", color:C.yellow},
-                      {label:"RISK OFF + Daily BEARISH", result:"STRONG SHORT/PUT SIGNAL",    color:C.red},
-                      {label:"RISK ON + Daily BEARISH",  result:"PULLBACK — WATCH ENTRY",     color:C.greenDim},
-                    ].map(({label,result,color})=>(
-                      <div key={label} style={{
-                        display:"flex",justifyContent:"space-between",alignItems:"center",
-                        fontSize:11,padding:"5px 10px",fontFamily:"monospace",
-                        background:`${color}08`,border:`1px solid ${color}22`,
-                      }}>
-                        <span style={{color:C.grey}}>{label}</span>
-                        <span style={{color,fontWeight:700,letterSpacing:1}}>{result}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+// ── DEFI LLAMA ────────────────────────────────────────────────────────────────
+async function fetchDefi(symbol) {
+  const url = `/api/defi?symbol=${symbol}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`DeFi HTTP ${res.status}`);
+  return res.json();
 }
 
-// ── UI COMPONENTS ─────────────────────────────────────────────────────────────
+// ── SPARKLINE ─────────────────────────────────────────────────────────────────
 function Sparkline({ prices, color, width=300, height=48 }) {
   if (!prices || prices.length < 2) return null;
   const min=Math.min(...prices), max=Math.max(...prices), range=max-min||1;
   const pts = prices.map((p,i)=>`${(i/(prices.length-1))*width},${height-((p-min)/range)*(height-4)-2}`).join(" ");
-  const id  = `g${color.replace(/\W/g,"")}`;
+  const id  = `g${color.replace(/\W/g,"")}${width}`;
   const lp  = prices[prices.length-1];
   const lx  = width, ly = height-((lp-min)/range)*(height-4)-2;
   return (
@@ -438,6 +309,7 @@ function Sparkline({ prices, color, width=300, height=48 }) {
   );
 }
 
+// ── RSI BAR ───────────────────────────────────────────────────────────────────
 function RSIBar({ rsi }) {
   if (rsi == null) return null;
   const pct   = Math.min(Math.max(rsi,0),100);
@@ -567,6 +439,7 @@ function DailyMACDPanel({ macd }) {
   );
 }
 
+// ── SIGNAL ASSET CARD ─────────────────────────────────────────────────────────
 function AssetCard({ asset, data, loading }) {
   const {symbol,type,label} = asset;
   const {price,prices,volumes,change,emas,ema200,rsi,macd,weeklyMacd} = data||{};
@@ -659,17 +532,13 @@ function AssetCard({ asset, data, loading }) {
             <span style={{color:C.grey,letterSpacing:1}}>EMA200</span>
             <span style={{color:C.white,fontWeight:600}}>{fmtEMA(ema200,type)}</span>
             <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-              <span style={{fontSize:12,fontWeight:700,letterSpacing:1,
-                color:above200?C.green:C.red,textShadow:`0 0 6px ${above200?C.green:C.red}55`}}>
+              <span style={{fontSize:12,fontWeight:700,letterSpacing:1,color:above200?C.green:C.red}}>
                 {above200?"▲ ABOVE 200":"▼ BELOW 200"}
               </span>
               <span style={{fontSize:10,color:above200?C.greenDim:"#ff6644"}}>
                 {above200?"+":""}{diff200}% from EMA200
               </span>
             </div>
-          </div>
-          <div style={{fontSize:10,color:C.greyDim,marginTop:4,letterSpacing:0.5}}>
-            {above200?"Long-term trend BULLISH — price above 200-day average":"Long-term trend BEARISH — price below 200-day average"}
           </div>
         </div>
       )}
@@ -704,6 +573,133 @@ function AssetCard({ asset, data, loading }) {
   );
 }
 
+// ── ON-CHAIN PROTOCOL CARD ────────────────────────────────────────────────────
+function ProtocolCard({ symbol, data, loading }) {
+  const meta  = PROTOCOL_META[symbol] || { name:symbol, token:symbol, category:"Unknown", color:C.green };
+  const score = getFundamentalScore(data);
+  const [vis,setVis] = useState(false);
+  useEffect(()=>{const t=setTimeout(()=>setVis(true),100);return()=>clearTimeout(t);},[]);
+
+  const tvlPct7d  = fmtPct(data?.tvl, data?.tvl7dAgo);
+  const tvlPct30d = fmtPct(data?.tvl, data?.tvl30dAgo);
+
+  return (
+    <div style={{
+      background:C.bgCard,border:`1px solid ${C.border}`,
+      borderTop:`2px solid ${loading?C.border:meta.color}`,
+      padding:"18px 18px 14px",display:"flex",flexDirection:"column",gap:12,
+      position:"relative",overflow:"hidden",
+      opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(10px)",
+      transition:"opacity 0.35s ease, transform 0.35s ease",
+      boxShadow:`0 0 20px ${meta.color}08`,
+    }}>
+      <div style={{position:"absolute",inset:0,pointerEvents:"none",
+        background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.01) 2px,rgba(0,255,65,0.01) 4px)"}}/>
+      <div style={{position:"absolute",top:0,right:0,width:0,height:0,
+        borderStyle:"solid",borderWidth:"0 20px 20px 0",
+        borderColor:`transparent ${meta.color}44 transparent transparent`}}/>
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div>
+          <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+            <span style={{fontSize:20,fontWeight:700,color:C.white,letterSpacing:2,
+              textShadow:`0 0 8px ${meta.color}55`}}>{meta.token}</span>
+            <span style={{fontSize:9,color:C.greyDim,letterSpacing:2,
+              border:`1px solid ${C.border}`,padding:"1px 5px"}}>{meta.category}</span>
+          </div>
+          <div style={{fontSize:12,color:C.grey,marginTop:2,letterSpacing:1}}>{meta.name}</div>
+        </div>
+        <div style={{fontSize:13,fontWeight:700,letterSpacing:2,
+          color:score.color,border:`1px solid ${score.color}55`,
+          padding:"4px 12px",background:`${score.color}10`,
+          boxShadow:`0 0 8px ${score.color}22`}}>
+          {loading?"LOADING":score.label}
+        </div>
+      </div>
+
+      {/* TVL sparkline */}
+      {data?.tvlHistory&&data.tvlHistory.length>1&&(
+        <Sparkline prices={data.tvlHistory} color={meta.color} width={280} height={40}/>
+      )}
+
+      <div style={{height:1,background:`linear-gradient(90deg,transparent,${C.borderBright},transparent)`}}/>
+
+      {/* TVL */}
+      <div>
+        <div style={{fontSize:10,color:C.greyDim,letterSpacing:2,marginBottom:6}}>TOTAL VALUE LOCKED</div>
+        <div style={{display:"flex",gap:8}}>
+          <div style={{flex:2,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
+            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>CURRENT TVL</div>
+            <div style={{fontSize:16,fontWeight:700,color:loading?C.greyDim:C.white}}>
+              {loading?"---":fmtUSD(data?.tvl)}
+            </div>
+          </div>
+          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
+            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>7D</div>
+            <div style={{fontSize:13,fontWeight:700,
+              color:tvlPct7d?parseFloat(tvlPct7d)>=0?C.green:C.red:C.greyDim}}>
+              {tvlPct7d?`${parseFloat(tvlPct7d)>=0?"+":""}${tvlPct7d}%`:"---"}
+            </div>
+          </div>
+          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
+            <div style={{fontSize:10,color:C.greyDim,letterSpacing:1,marginBottom:4}}>30D</div>
+            <div style={{fontSize:13,fontWeight:700,
+              color:tvlPct30d?parseFloat(tvlPct30d)>=0?C.green:C.red:C.greyDim}}>
+              {tvlPct30d?`${parseFloat(tvlPct30d)>=0?"+":""}${tvlPct30d}%`:"---"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fees & Revenue */}
+      {(data?.fees24h||data?.fees30d||data?.revenue24h)&&(
+        <div>
+          <div style={{fontSize:10,color:C.greyDim,letterSpacing:2,marginBottom:6}}>FEES & REVENUE</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[
+              {label:"FEES 24H",  val:data?.fees24h},
+              {label:"FEES 7D",   val:data?.fees7d},
+              {label:"FEES 30D",  val:data?.fees30d},
+              {label:"REV 24H",   val:data?.revenue24h},
+              {label:"REV 30D",   val:data?.revenue30d},
+            ].filter(x=>x.val).map(({label,val})=>(
+              <div key={label} style={{flex:1,minWidth:70,background:C.bgDeep,
+                border:`1px solid ${C.borderBright}`,padding:"6px 8px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:C.greyDim,letterSpacing:1,marginBottom:3}}>{label}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.green}}>{fmtUSD(val)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Revenue trend indicator */}
+      {data?.fees30d&&data?.fees7d&&(
+        <div style={{
+          fontSize:11,padding:"6px 10px",letterSpacing:1,
+          color:(data.fees7d/7)>(data.fees30d/30)?C.green:C.red,
+          background:(data.fees7d/7)>(data.fees30d/30)?`${C.green}08`:`${C.red}08`,
+          border:`1px solid ${(data.fees7d/7)>(data.fees30d/30)?C.green:C.red}33`,
+        }}>
+          {(data.fees7d/7)>(data.fees30d/30)
+            ? "▲ FEES ACCELERATING — 7D average above 30D average"
+            : "▼ FEES DECLINING — 7D average below 30D average"}
+        </div>
+      )}
+
+      {/* No data fallback */}
+      {!loading&&!data?.tvl&&(
+        <div style={{fontSize:11,color:C.greyDim,letterSpacing:1,padding:"10px",
+          border:`1px solid ${C.border}`,textAlign:"center"}}>
+          ◦ LIMITED ON-CHAIN DATA AVAILABLE
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SESSION BAR ───────────────────────────────────────────────────────────────
 function SessionBar() {
   const [now,setNow] = useState(new Date());
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t);},[]);
@@ -747,21 +743,16 @@ function MacroBanner({ assetData }) {
   const bulls=sigs.filter(s=>s.includes("BUY")).length;
   const bears=sigs.filter(s=>s.includes("SELL")).length;
   const above200Count=Object.values(assetData).filter(d=>d?.ema200&&d?.price&&d.price>d.ema200).length;
-  const below200Count=Object.values(assetData).filter(d=>d?.ema200&&d?.price&&d.price<d.ema200).length;
-  const total200=above200Count+below200Count;
-
+  const total200=Object.values(assetData).filter(d=>d?.ema200&&d?.price).length;
   let wMsg,wColor;
-  if(riskOff/total>0.55){wMsg=`⚠  WEEKLY REGIME: RISK OFF — ${riskOff}/${total} tickers bearish. Hold off on new longs.`;wColor=C.red;}
-  else if(riskOn/total>0.55){wMsg=`◈  WEEKLY REGIME: RISK ON — ${riskOn}/${total} tickers bullish. Weekly trend supports entries.`;wColor=C.green;}
-  else{wMsg=`◦  WEEKLY REGIME: MIXED — No dominant trend. Use daily MACD to time entries.`;wColor=C.yellow;}
-
+  if(riskOff/total>0.55){wMsg=`⚠  WEEKLY REGIME: RISK OFF — ${riskOff}/${total} tickers bearish.`;wColor=C.red;}
+  else if(riskOn/total>0.55){wMsg=`◈  WEEKLY REGIME: RISK ON — ${riskOn}/${total} tickers bullish.`;wColor=C.green;}
+  else{wMsg=`◦  WEEKLY REGIME: MIXED — No dominant trend.`;wColor=C.yellow;}
   let dMsg,dColor;
   if(bears/(sigs.length||1)>0.55){dMsg=`DAILY: ${bears} SELL signals dominant.`;dColor="#ff6644";}
   else if(bulls/(sigs.length||1)>0.55){dMsg=`DAILY: ${bulls} BUY signals dominant.`;dColor=C.greenDim;}
-  else{dMsg=`DAILY: Mixed signals — no dominant short-term bias.`;dColor=C.grey;}
-
-  const e200Msg=total200>0?`EMA200: ${above200Count}/${total200} above — ${above200Count/total200>0.6?"long-term BULLISH":above200Count/total200<0.4?"long-term BEARISH":"mixed long-term picture"}`:null;
-
+  else{dMsg=`DAILY: Mixed signals.`;dColor=C.grey;}
+  const e200Msg=total200>0?`EMA200: ${above200Count}/${total200} above — ${above200Count/total200>0.6?"long-term BULLISH":above200Count/total200<0.4?"long-term BEARISH":"mixed"}`:null;
   return (
     <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
       <div style={{background:`${wColor}08`,border:`1px solid ${wColor}44`,
@@ -770,37 +761,107 @@ function MacroBanner({ assetData }) {
       <div style={{display:"flex",gap:6}}>
         <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,
           padding:"8px 18px",fontSize:12,color:dColor,letterSpacing:0.5}}>{dMsg}</div>
-        {e200Msg&&(
-          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,
-            padding:"8px 18px",fontSize:12,color:C.grey,letterSpacing:0.5}}>{e200Msg}</div>
-        )}
+        {e200Msg&&<div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,
+          padding:"8px 18px",fontSize:12,color:C.grey,letterSpacing:0.5}}>{e200Msg}</div>}
       </div>
+    </div>
+  );
+}
+
+// ── LEARN PANEL ───────────────────────────────────────────────────────────────
+const LEARN_SECTIONS = [
+  { title:"MACD — Momentum Explained", color:C.green, content:[
+    { heading:"What is MACD?", text:"MACD measures whether short-term price momentum is faster or slower than long-term momentum. It answers one question: is buying pressure accelerating or fading?" },
+    { heading:"The Three Numbers", text:"MACD Line = 12-day EMA minus 26-day EMA. Positive = bullish pressure. Signal Line = 9-day smoothing of MACD. Histogram = MACD minus Signal — the most important number. When it crosses zero momentum is shifting." },
+    { heading:"Daily vs Weekly MACD", text:"Daily MACD (12,26,9) = what momentum is doing RIGHT NOW. Weekly MACD (6,20,9) = overall trend direction. Weekly is the highway — uphill or downhill. Daily is your speed on that highway." },
+    { heading:"The Four Setups", text:"RISK ON + Daily BULLISH = Highest confidence long. RISK OFF + Daily BULLISH = Bounce in downtrend, be cautious. RISK OFF + Daily BEARISH = Strong short/put signal. RISK ON + Daily BEARISH = Pullback in uptrend, watch for entry." },
+  ]},
+  { title:"RSI — Overbought & Oversold", color:C.yellow, content:[
+    { heading:"What is RSI?", text:"RSI measures how fast and how much price has moved recently on a scale of 0–100. High RSI = price moved up fast. Low RSI = price dropped hard." },
+    { heading:"Key Levels", text:"Below 30 = OVERSOLD — potential bounce zone. Above 65 = OVERBOUGHT — momentum may be exhausted. 30–65 = NEUTRAL — trend continuation likely." },
+    { heading:"Important Note", text:"Overbought can stay overbought for weeks in a strong trend. Use RSI alongside MACD as a timing tool, never alone." },
+  ]},
+  { title:"EMAs — Trend Direction", color:"#00ccff", content:[
+    { heading:"What is an EMA?", text:"Exponential Moving Average — the average closing price over N days, with recent days weighted more. EMA5=5 days, EMA13=2-3 weeks, EMA21=~1 month, EMA50=2-3 months, EMA200=~1 year." },
+    { heading:"EMA Alignment Ring", text:"Shows how many of the 5 signal EMAs price is above. 5/5 = all timeframes bullish, price has 5 floors of support. 0/5 = all timeframes bearish, price has 5 ceilings of resistance." },
+    { heading:"EMA200", text:"Most watched institutional level. Above EMA200 = long-term bull market. Below = long-term bear. Alerts when price gets within 0.5% of EMA200." },
+  ]},
+  { title:"Signal Score Breakdown", color:C.greenDim, content:[
+    { heading:"How the Score Works", text:"Each card scores from ~-5 to +5. EMA5>EMA13: +1. EMA13>EMA21: +1. RSI<35: +2. RSI>65: -2. Daily change >0.5%: +1. MACD histogram positive: +0.5. Weekly RISK ON: +1. Weekly RISK OFF: -1." },
+    { heading:"Thresholds", text:"Above 2.5 = STRONG BUY. 1 to 2.5 = BUY. -1 to 1 = NEUTRAL. -2.5 to -1 = SELL. Below -2.5 = STRONG SELL. EMA200 is NOT included in the score." },
+  ]},
+  { title:"On-Chain Metrics Explained", color:C.cyan, content:[
+    { heading:"TVL — Total Value Locked", text:"The total dollar value of crypto assets deposited in a protocol's smart contracts. Rising TVL = growing adoption and user trust. Falling TVL = users withdrawing, declining confidence." },
+    { heading:"Fees vs Revenue", text:"Fees = total paid by users to use the protocol. Revenue = portion kept by the protocol treasury or token holders. A protocol generating real fees has real usage. Revenue growing faster than TVL = improving capital efficiency." },
+    { heading:"Fundamental Score", text:"STRONG = TVL and fees both growing. GROWING = positive trend on most metrics. STABLE = flat metrics, no clear direction. CAUTION = declining on one or more metrics. WEAK = TVL and fees both declining." },
+    { heading:"Fees Accelerating", text:"When the 7-day average daily fee is higher than the 30-day average, fees are accelerating — demand is increasing. This is a bullish fundamental signal." },
+  ]},
+];
+
+function LearnPanel() {
+  const [open,setOpen] = useState(null);
+  return (
+    <div style={{background:C.bgDeep,border:`1px solid ${C.borderBright}`,marginBottom:14,overflow:"hidden"}}>
+      <div style={{padding:"12px 18px",borderBottom:open!==null?`1px solid ${C.border}`:"none",fontSize:11,color:C.grey,letterSpacing:3}}>
+        {"// INDICATOR REFERENCE GUIDE — click any section to expand"}
+      </div>
+      {LEARN_SECTIONS.map((sec,idx)=>{
+        const isOpen=open===idx;
+        return (
+          <div key={idx} style={{borderBottom:idx<LEARN_SECTIONS.length-1?`1px solid ${C.border}`:"none"}}>
+            <button onClick={()=>setOpen(isOpen?null:idx)} style={{
+              width:"100%",background:isOpen?`${sec.color}08`:"transparent",border:"none",
+              padding:"12px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",
+            }}>
+              <span style={{fontSize:12,color:sec.color,fontWeight:700,letterSpacing:2,fontFamily:"monospace"}}>{sec.title.toUpperCase()}</span>
+              <span style={{fontSize:14,color:sec.color,opacity:0.7}}>{isOpen?"▲":"▼"}</span>
+            </button>
+            {isOpen&&(
+              <div style={{padding:"0 18px 18px",display:"flex",flexDirection:"column",gap:14}}>
+                {sec.content.map((block,i)=>(
+                  <div key={i}>
+                    <div style={{fontSize:11,color:sec.color,letterSpacing:2,marginBottom:6,fontFamily:"monospace"}}>◈ {block.heading.toUpperCase()}</div>
+                    <div style={{fontSize:12,color:C.grey,lineHeight:1.7,letterSpacing:0.3,fontFamily:"monospace"}}>{block.text}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function TradingDashboard() {
+  const [activeTab,setActiveTab]   = useState("SIGNALS");
   const [assetData,setAssetData]   = useState({});
+  const [defiData,setDefiData]     = useState({});
   const [loading,setLoading]       = useState({});
+  const [defiLoading,setDefiLoading] = useState({});
   const [lastUpdate,setLastUpdate] = useState(null);
+  const [defiLastUpdate,setDefiLastUpdate] = useState(null);
   const [filter,setFilter]         = useState("ALL");
+  const [defiFilter,setDefiFilter] = useState("ALL");
   const [statusMsg,setStatusMsg]   = useState("");
   const [showLearn,setShowLearn]   = useState(false);
-  const intervalRef = useRef(null);
+  const signalsIntervalRef = useRef(null);
+  const defiIntervalRef    = useRef(null);
 
+  // ── Process signal asset ──
   const processAsset = (symbol, raw) => {
-    const emas  = EMA_PERIODS.map(p => calcEMA(raw.prices, p));
+    const emas   = EMA_PERIODS.map(p => calcEMA(raw.prices, p));
     const ema200 = calcEMA(raw.prices, 200);
-    const rsi   = calcRSI(raw.prices);
-    const macd  = calcMACDCustom(raw.prices, 12, 26, 9);
-    const wm    = calcWeeklyMACD(raw.prices);
-    const sig   = getSignal(raw.price, emas, rsi, raw.change, macd, wm);
+    const rsi    = calcRSI(raw.prices);
+    const macd   = calcMACDCustom(raw.prices, 12, 26, 9);
+    const wm     = calcWeeklyMACD(raw.prices);
+    const sig    = getSignal(raw.price, emas, rsi, raw.change, macd, wm);
     return { ...raw, emas, ema200, rsi, macd, weeklyMacd:wm, signal:sig.label };
   };
 
-  const fetchAllData = useCallback(async () => {
-    console.log("[SignalDesk] Fetching all tickers via Yahoo Finance (1y data)...");
+  // ── Fetch signals ──
+  const fetchSignals = useCallback(async () => {
     for (const asset of ALL_TICKERS) {
       const {symbol, yahooSymbol} = asset;
       setLoading(prev=>({...prev,[symbol]:true}));
@@ -808,9 +869,7 @@ export default function TradingDashboard() {
       try {
         const raw = await fetchYahoo(yahooSymbol);
         setAssetData(prev=>({...prev,[symbol]:processAsset(symbol,raw)}));
-        console.log(`[Yahoo] ✓ ${symbol} — $${raw.price.toFixed(2)} (${raw.prices.length} bars)`);
       } catch(e) {
-        console.warn(`[Yahoo] ✗ ${symbol}: ${e.message} — using demo data`);
         const mock = getMockData(symbol);
         setAssetData(prev=>({...prev,[symbol]:processAsset(symbol,mock)}));
       }
@@ -819,14 +878,36 @@ export default function TradingDashboard() {
     }
     setStatusMsg("");
     setLastUpdate(new Date());
-    console.log("[SignalDesk] All tickers loaded.");
+  }, []);
+
+  // ── Fetch on-chain data ──
+  const fetchOnChain = useCallback(async () => {
+    for (const symbol of ALL_PROTOCOLS) {
+      setDefiLoading(prev=>({...prev,[symbol]:true}));
+      try {
+        const data = await fetchDefi(symbol);
+        setDefiData(prev=>({...prev,[symbol]:data}));
+      } catch(e) {
+        console.warn(`[DeFi] ${symbol} failed:`, e.message);
+        setDefiData(prev=>({...prev,[symbol]:null}));
+      }
+      setDefiLoading(prev=>({...prev,[symbol]:false}));
+      await new Promise(r=>setTimeout(r,500));
+    }
+    setDefiLastUpdate(new Date());
   }, []);
 
   useEffect(()=>{
-    fetchAllData();
-    intervalRef.current=setInterval(fetchAllData,5*60*1000);
-    return()=>clearInterval(intervalRef.current);
-  },[fetchAllData]);
+    fetchSignals();
+    signalsIntervalRef.current = setInterval(fetchSignals, 5*60*1000);
+    return()=>clearInterval(signalsIntervalRef.current);
+  },[fetchSignals]);
+
+  useEffect(()=>{
+    fetchOnChain();
+    defiIntervalRef.current = setInterval(fetchOnChain, 15*60*1000);
+    return()=>clearInterval(defiIntervalRef.current);
+  },[fetchOnChain]);
 
   const alertCount = Object.entries(assetData).reduce((acc,[sym,d])=>{
     if(!d?.price) return acc;
@@ -839,6 +920,8 @@ export default function TradingDashboard() {
 
   const filterOptions=["ALL","RISK ON","RISK OFF","ABOVE 200","BELOW 200","STRONG BUY","BUY","NEUTRAL","SELL","STRONG SELL","⚡ ALERTS"];
   const fColors={"RISK ON":C.green,"RISK OFF":C.red,"STRONG BUY":C.green,"BUY":C.greenDim,"NEUTRAL":C.yellow,"SELL":"#ff6644","STRONG SELL":C.red,"⚡ ALERTS":"#ff8800","ALL":C.grey,"ABOVE 200":C.green,"BELOW 200":C.red};
+
+  const defiFilterOptions=["ALL","STRONG","GROWING","STABLE","CAUTION","WEAK","L1 Chains","DeFi Protocols"];
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,
@@ -854,7 +937,7 @@ export default function TradingDashboard() {
         button:hover{filter:brightness(1.3);}
       `}</style>
 
-      {/* Header */}
+      {/* ── HEADER ── */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
         <div>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
@@ -871,93 +954,189 @@ export default function TradingDashboard() {
             )}
           </div>
           <div style={{fontSize:11,color:C.greyDim,letterSpacing:3,marginTop:5}}>
-            {totalCount} TICKERS · YAHOO FINANCE · 1Y DATA · EMA200 · NO API KEY &nbsp;·&nbsp;
-            {lastUpdate?`SYNC ${lastUpdate.toLocaleTimeString()}`:"INITIALIZING..."}
+            @SIGNALDESK_AB &nbsp;·&nbsp; YAHOO FINANCE + DEFI LLAMA &nbsp;·&nbsp; NO API KEY REQUIRED
           </div>
         </div>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setShowLearn(!showLearn)} style={{
-            background:showLearn?`${C.green}12`:"transparent",
-            border:`1px solid ${showLearn?C.green+"66":C.borderBright}`,
-            color:showLearn?C.green:C.grey,
-            padding:"7px 14px",fontSize:11,letterSpacing:1,
-            boxShadow:showLearn?`0 0 8px ${C.green}22`:"none"}}>
-            ? LEARN
-          </button>
-          <button onClick={fetchAllData} style={{background:"transparent",
-            border:`1px solid ${C.borderBright}`,
+          {activeTab==="SIGNALS"&&(
+            <button onClick={()=>setShowLearn(!showLearn)} style={{
+              background:showLearn?`${C.green}12`:"transparent",
+              border:`1px solid ${showLearn?C.green+"66":C.borderBright}`,
+              color:showLearn?C.green:C.grey,
+              padding:"7px 14px",fontSize:11,letterSpacing:1,
+              boxShadow:showLearn?`0 0 8px ${C.green}22`:"none"}}>
+              ? LEARN
+            </button>
+          )}
+          <button onClick={()=>{ activeTab==="SIGNALS"?fetchSignals():fetchOnChain(); }} style={{
+            background:"transparent",border:`1px solid ${C.borderBright}`,
             color:C.grey,padding:"7px 14px",fontSize:11,letterSpacing:1}}>↺ REFRESH</button>
         </div>
       </div>
 
-      {/* Loading bar */}
-      {!allLoaded&&(
-        <div style={{marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <span style={{fontSize:11,color:C.greyDim,letterSpacing:2}}>{statusMsg||"LOADING MARKET DATA"}</span>
-            <span style={{fontSize:11,color:C.green,letterSpacing:2}}>{loadedCount}/{totalCount}</span>
-          </div>
-          <div style={{height:3,background:C.bgDeep,border:`1px solid ${C.border}`}}>
-            <div style={{height:"100%",width:`${(loadedCount/totalCount)*100}%`,
-              background:`linear-gradient(90deg,${C.greenDim},${C.green})`,
-              boxShadow:`0 0 8px ${C.green}66`,transition:"width 0.4s ease"}}/>
-          </div>
-        </div>
-      )}
-
-      {/* Learn panel — collapsible */}
-      {showLearn && <LearnPanel/>}
-
-      <SessionBar/>
-      <MacroBanner assetData={assetData}/>
-
-      {/* Filter bar */}
-      <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
-        {filterOptions.map(f=>{
-          const active=filter===f, color=fColors[f]||C.grey;
+      {/* ── TAB SWITCHER ── */}
+      <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:`1px solid ${C.border}`}}>
+        {[
+          {id:"SIGNALS",      label:"◈ SIGNALS",          sub:`${totalCount} TICKERS`},
+          {id:"ONCHAIN",      label:"◈ ON-CHAIN METRICS",  sub:`${ALL_PROTOCOLS.length} PROTOCOLS · DEFI LLAMA`},
+        ].map(({id,label,sub})=>{
+          const active = activeTab===id;
           return (
-            <button key={f} onClick={()=>setFilter(f)} style={{
-              background:active?`${color}18`:"transparent",
-              border:`1px solid ${active?color+"88":C.border}`,
-              color:active?color:C.greyDim,
-              padding:"5px 12px",fontSize:11,letterSpacing:1,
-              boxShadow:active?`0 0 8px ${color}22`:"none"}}>{f}</button>
+            <button key={id} onClick={()=>setActiveTab(id)} style={{
+              background:active?`${C.green}0a`:"transparent",
+              border:"none",
+              borderBottom:`2px solid ${active?C.green:"transparent"}`,
+              padding:"10px 24px 12px",
+              display:"flex",flexDirection:"column",gap:3,
+              marginBottom:-1,
+            }}>
+              <span style={{fontSize:13,fontWeight:700,color:active?C.green:C.greyDim,letterSpacing:2}}>{label}</span>
+              <span style={{fontSize:9,color:active?C.greenDim:C.greyDim,letterSpacing:2}}>{sub}</span>
+            </button>
           );
         })}
+        <div style={{flex:1}}/>
+        <div style={{fontSize:10,color:C.greyDim,letterSpacing:2,alignSelf:"center",paddingRight:4}}>
+          {activeTab==="SIGNALS"
+            ? lastUpdate?`SIGNALS SYNC ${lastUpdate.toLocaleTimeString()}`:"LOADING..."
+            : defiLastUpdate?`ONCHAIN SYNC ${defiLastUpdate.toLocaleTimeString()}`:"LOADING..."}
+        </div>
       </div>
 
-      {/* Sectors */}
-      {SECTORS.map(sector=>{
-        const filtered=sector.tickers.filter(asset=>{
-          const d=assetData[asset.symbol];
-          if(filter==="ALL") return true;
-          if(filter==="RISK ON")    return d?.weeklyMacd?.riskOn===true;
-          if(filter==="RISK OFF")   return d?.weeklyMacd?.riskOn===false;
-          if(filter==="ABOVE 200")  return d?.ema200&&d?.price&&d.price>d.ema200;
-          if(filter==="BELOW 200")  return d?.ema200&&d?.price&&d.price<d.ema200;
-          if(filter==="⚡ ALERTS")  return d&&getAlerts(asset.symbol,d.price,d.rsi,d.macd,d.weeklyMacd,d.change||0,d.emas,d.ema200).some(a=>a.p===1);
-          return d?.signal===filter;
-        });
-        if(!filtered.length) return null;
-        return (
-          <div key={sector.label} style={{marginBottom:32}}>
-            <div style={{fontSize:12,color:C.green,letterSpacing:4,marginBottom:12,
-              display:"flex",alignItems:"center",gap:10,textShadow:`0 0 8px ${C.green}66`}}>
-              <div style={{flex:1,height:1,background:`linear-gradient(90deg,${C.green}44,transparent)`}}/>
-              {sector.icon} {sector.label.toUpperCase()}
-              <div style={{flex:1,height:1,background:`linear-gradient(270deg,${C.green}44,transparent)`}}/>
+      {/* ══════════════════════ SIGNALS TAB ══════════════════════════════════ */}
+      {activeTab==="SIGNALS"&&(
+        <>
+          {!allLoaded&&(
+            <div style={{marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span style={{fontSize:11,color:C.greyDim,letterSpacing:2}}>{statusMsg||"LOADING MARKET DATA"}</span>
+                <span style={{fontSize:11,color:C.green,letterSpacing:2}}>{loadedCount}/{totalCount}</span>
+              </div>
+              <div style={{height:3,background:C.bgDeep,border:`1px solid ${C.border}`}}>
+                <div style={{height:"100%",width:`${(loadedCount/totalCount)*100}%`,
+                  background:`linear-gradient(90deg,${C.greenDim},${C.green})`,
+                  boxShadow:`0 0 8px ${C.green}66`,transition:"width 0.4s ease"}}/>
+              </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:14}}>
-              {filtered.map(asset=>(
-                <AssetCard key={asset.symbol} asset={asset} data={assetData[asset.symbol]} loading={!!loading[asset.symbol]}/>
-              ))}
-            </div>
+          )}
+
+          {showLearn&&<LearnPanel/>}
+          <SessionBar/>
+          <MacroBanner assetData={assetData}/>
+
+          <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
+            {filterOptions.map(f=>{
+              const active=filter===f, color=fColors[f]||C.grey;
+              return (
+                <button key={f} onClick={()=>setFilter(f)} style={{
+                  background:active?`${color}18`:"transparent",
+                  border:`1px solid ${active?color+"88":C.border}`,
+                  color:active?color:C.greyDim,
+                  padding:"5px 12px",fontSize:11,letterSpacing:1,
+                  boxShadow:active?`0 0 8px ${color}22`:"none"}}>{f}</button>
+              );
+            })}
           </div>
-        );
-      })}
+
+          {SECTORS.map(sector=>{
+            const filtered=sector.tickers.filter(asset=>{
+              const d=assetData[asset.symbol];
+              if(filter==="ALL") return true;
+              if(filter==="RISK ON")   return d?.weeklyMacd?.riskOn===true;
+              if(filter==="RISK OFF")  return d?.weeklyMacd?.riskOn===false;
+              if(filter==="ABOVE 200") return d?.ema200&&d?.price&&d.price>d.ema200;
+              if(filter==="BELOW 200") return d?.ema200&&d?.price&&d.price<d.ema200;
+              if(filter==="⚡ ALERTS") return d&&getAlerts(asset.symbol,d.price,d.rsi,d.macd,d.weeklyMacd,d.change||0,d.emas,d.ema200).some(a=>a.p===1);
+              return d?.signal===filter;
+            });
+            if(!filtered.length) return null;
+            return (
+              <div key={sector.label} style={{marginBottom:32}}>
+                <div style={{fontSize:12,color:C.green,letterSpacing:4,marginBottom:12,
+                  display:"flex",alignItems:"center",gap:10,textShadow:`0 0 8px ${C.green}66`}}>
+                  <div style={{flex:1,height:1,background:`linear-gradient(90deg,${C.green}44,transparent)`}}/>
+                  {sector.icon} {sector.label.toUpperCase()}
+                  <div style={{flex:1,height:1,background:`linear-gradient(270deg,${C.green}44,transparent)`}}/>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:14}}>
+                  {filtered.map(asset=>(
+                    <AssetCard key={asset.symbol} asset={asset} data={assetData[asset.symbol]} loading={!!loading[asset.symbol]}/>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* ══════════════════════ ON-CHAIN TAB ═════════════════════════════════ */}
+      {activeTab==="ONCHAIN"&&(
+        <>
+          {/* On-chain summary banner */}
+          <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+            {[
+              { label:"PROTOCOLS TRACKED", val:`${ALL_PROTOCOLS.length}`, color:C.green },
+              { label:"WITH TVL DATA", val:`${Object.values(defiData).filter(d=>d?.tvl).length}`, color:C.greenDim },
+              { label:"GENERATING FEES", val:`${Object.values(defiData).filter(d=>d?.fees24h).length}`, color:C.yellow },
+              { label:"DATA SOURCE", val:"DEFI LLAMA", color:C.cyan },
+              { label:"REFRESH", val:"EVERY 15 MIN", color:C.greyDim },
+            ].map(({label,val,color})=>(
+              <div key={label} style={{background:C.bgDeep,border:`1px solid ${C.border}`,
+                padding:"8px 14px",display:"flex",flexDirection:"column",gap:3}}>
+                <div style={{fontSize:9,color:C.greyDim,letterSpacing:2}}>{label}</div>
+                <div style={{fontSize:13,fontWeight:700,color,letterSpacing:1}}>{val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* DeFi filter bar */}
+          <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
+            {defiFilterOptions.map(f=>{
+              const active=defiFilter===f;
+              const colorMap={"STRONG":C.green,"GROWING":C.greenDim,"STABLE":C.yellow,"CAUTION":"#ff6644","WEAK":C.red,"ALL":C.grey,"L1 Chains":C.cyan,"DeFi Protocols":C.greenDim};
+              const color=colorMap[f]||C.grey;
+              return (
+                <button key={f} onClick={()=>setDefiFilter(f)} style={{
+                  background:active?`${color}18`:"transparent",
+                  border:`1px solid ${active?color+"88":C.border}`,
+                  color:active?color:C.greyDim,
+                  padding:"5px 12px",fontSize:11,letterSpacing:1,
+                  boxShadow:active?`0 0 8px ${color}22`:"none"}}>{f}</button>
+              );
+            })}
+          </div>
+
+          {ONCHAIN_SECTORS.map(sector=>{
+            const filtered=sector.protocols.filter(sym=>{
+              const d=defiData[sym];
+              const score=getFundamentalScore(d);
+              if(defiFilter==="ALL") return true;
+              if(defiFilter==="L1 Chains")     return PROTOCOL_META[sym]?.category==="L1 Chain";
+              if(defiFilter==="DeFi Protocols") return PROTOCOL_META[sym]?.category!=="L1 Chain";
+              return score.label===defiFilter;
+            });
+            if(!filtered.length) return null;
+            return (
+              <div key={sector.label} style={{marginBottom:32}}>
+                <div style={{fontSize:12,color:C.cyan,letterSpacing:4,marginBottom:12,
+                  display:"flex",alignItems:"center",gap:10,textShadow:`0 0 8px ${C.cyan}66`}}>
+                  <div style={{flex:1,height:1,background:`linear-gradient(90deg,${C.cyan}44,transparent)`}}/>
+                  {sector.icon} {sector.label.toUpperCase()}
+                  <div style={{flex:1,height:1,background:`linear-gradient(270deg,${C.cyan}44,transparent)`}}/>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+                  {filtered.map(sym=>(
+                    <ProtocolCard key={sym} symbol={sym} data={defiData[sym]} loading={!!defiLoading[sym]}/>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
 
       <div style={{marginTop:24,fontSize:10,color:C.greyDim,textAlign:"center",letterSpacing:2}}>
-        {"// SIGNAL//DESK · NOT FINANCIAL ADVICE · TIMING REFERENCE ONLY · AUTO-REFRESH 5 MIN //"}
+        {"// SIGNAL//DESK · NOT FINANCIAL ADVICE · TIMING REFERENCE ONLY · SIGNALS 5MIN · ON-CHAIN 15MIN //"}
       </div>
     </div>
   );
