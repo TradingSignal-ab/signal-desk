@@ -587,18 +587,18 @@ function ProtocolCard({ symbol, data, loading }) {
   return (
     <div style={{
       background:C.bgCard,border:`1px solid ${C.border}`,
-      borderTop:`2px solid ${loading?C.border:meta.color}`,
+      borderTop:`2px solid ${loading?C.border:score.color}`,
       padding:"18px 18px 14px",display:"flex",flexDirection:"column",gap:12,
       position:"relative",overflow:"hidden",
       opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(10px)",
       transition:"opacity 0.35s ease, transform 0.35s ease",
-      boxShadow:`0 0 20px ${meta.color}08`,
+      boxShadow:`0 0 20px ${score.color}15`,
     }}>
       <div style={{position:"absolute",inset:0,pointerEvents:"none",
         background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.01) 2px,rgba(0,255,65,0.01) 4px)"}}/>
       <div style={{position:"absolute",top:0,right:0,width:0,height:0,
         borderStyle:"solid",borderWidth:"0 20px 20px 0",
-        borderColor:`transparent ${meta.color}44 transparent transparent`}}/>
+        borderColor:`transparent ${score.color}55 transparent transparent`}}/>
 
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
