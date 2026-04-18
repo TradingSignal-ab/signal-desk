@@ -584,6 +584,22 @@ function ProtocolCard({ symbol, data, loading }) {
   const tvlPct7d  = fmtPct(data?.tvl, data?.tvl7dAgo);
   const tvlPct30d = fmtPct(data?.tvl, data?.tvl30dAgo);
 
+  // MC/TVL ratio — the key valuation metric
+  const mcTvlRatio  = data?.mcTvlRatio || (data?.mcap && data?.tvl ? parseFloat((data.mcap / data.tvl).toFixed(2)) : null);
+  const mcTvlColor  = mcTvlRatio === null ? C.greyDim
+    : mcTvlRatio < 1   ? C.green      // undervalued vs usage
+    : mcTvlRatio < 3   ? C.greenDim   // fair value
+    : mcTvlRatio < 7   ? C.yellow     // elevated
+    : C.red;                           // highly speculative
+  const mcTvlLabel  = mcTvlRatio === null ? "---"
+    : mcTvlRatio < 1   ? `${mcTvlRatio}x ◈ UNDERVALUED`
+    : mcTvlRatio < 3   ? `${mcTvlRatio}x ◈ FAIR VALUE`
+    : mcTvlRatio < 7   ? `${mcTvlRatio}x ◈ ELEVATED`
+    : `${mcTvlRatio}x ◈ SPECULATIVE`;
+
+  // Protocol note (for XRP, Chainlink etc with non-standard models)
+  const note = data?.note || null;
+
   return (
     <div style={{
       background:C.bgCard,border:`1px solid ${C.border}`,
@@ -605,11 +621,21 @@ function ProtocolCard({ symbol, data, loading }) {
         <div>
           <div style={{display:"flex",alignItems:"baseline",gap:8}}>
             <span style={{fontSize:20,fontWeight:700,color:C.white,letterSpacing:2,
-              textShadow:`0 0 8px ${meta.color}55`}}>{meta.token}</span>
+              textShadow:`0 0 8px ${score.color}55`}}>{meta.token}</span>
             <span style={{fontSize:9,color:C.greyDim,letterSpacing:2,
               border:`1px solid ${C.border}`,padding:"1px 5px"}}>{meta.category}</span>
           </div>
           <div style={{fontSize:12,color:C.grey,marginTop:2,letterSpacing:1}}>{meta.name}</div>
+          {data?.price&&(
+            <div style={{fontSize:11,color:C.greyDim,marginTop:2}}>
+              ${parseFloat(data.price).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:4})}
+              {data?.change24h&&(
+                <span style={{marginLeft:8,color:data.change24h>=0?C.green:C.red}}>
+                  {data.change24h>=0?"▲":"▼"} {Math.abs(data.change24h).toFixed(2)}%
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div style={{fontSize:13,fontWeight:700,letterSpacing:2,
           color:score.color,border:`1px solid ${score.color}55`,
@@ -621,36 +647,71 @@ function ProtocolCard({ symbol, data, loading }) {
 
       {/* TVL sparkline */}
       {data?.tvlHistory&&data.tvlHistory.length>1&&(
-        <Sparkline prices={data.tvlHistory} color={meta.color} width={280} height={40}/>
+        <Sparkline prices={data.tvlHistory} color={score.color} width={280} height={40}/>
       )}
 
       <div style={{height:1,background:`linear-gradient(90deg,transparent,${C.borderBright},transparent)`}}/>
 
-      {/* TVL */}
+      {/* Market Cap + TVL side by side */}
       <div>
-        <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>TOTAL VALUE LOCKED</div>
-        <div style={{display:"flex",gap:8}}>
-          <div style={{flex:2,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
-            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>CURRENT TVL</div>
-            <div style={{fontSize:16,fontWeight:700,color:loading?C.greyDim:C.white}}>
+        <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>MARKET CAP & TVL</div>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>MARKET CAP</div>
+            <div style={{fontSize:14,fontWeight:700,color:loading?C.greyDim:C.white}}>
+              {loading?"---":fmtUSD(data?.mcap)}
+            </div>
+          </div>
+          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px"}}>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>TVL</div>
+            <div style={{fontSize:14,fontWeight:700,color:loading?C.greyDim:C.white}}>
               {loading?"---":fmtUSD(data?.tvl)}
             </div>
           </div>
-          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>7D</div>
-            <div style={{fontSize:13,fontWeight:700,
-              color:tvlPct7d?parseFloat(tvlPct7d)>=0?C.green:C.red:C.greyDim}}>
-              {tvlPct7d?`${parseFloat(tvlPct7d)>=0?"+":""}${tvlPct7d}%`:"---"}
-            </div>
-          </div>
-          <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"8px 10px",textAlign:"center"}}>
-            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:4}}>30D</div>
-            <div style={{fontSize:13,fontWeight:700,
-              color:tvlPct30d?parseFloat(tvlPct30d)>=0?C.green:C.red:C.greyDim}}>
-              {tvlPct30d?`${parseFloat(tvlPct30d)>=0?"+":""}${tvlPct30d}%`:"---"}
-            </div>
-          </div>
         </div>
+
+        {/* MC/TVL Ratio */}
+        {mcTvlRatio!==null&&(
+          <div style={{
+            display:"flex",justifyContent:"space-between",alignItems:"center",
+            padding:"7px 10px",
+            background:`${mcTvlColor}08`,
+            border:`1px solid ${mcTvlColor}44`,
+          }}>
+            <div>
+              <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:2}}>MC / TVL RATIO</div>
+              <div style={{fontSize:9,color:C.greyDim,letterSpacing:0.5}}>
+                {mcTvlRatio<1?"Below 1x = more value locked than market values it"
+                :mcTvlRatio<3?"1–3x = market cap roughly in line with usage"
+                :mcTvlRatio<7?"3–7x = market pricing in future growth"
+                :"Above 7x = highly speculative relative to actual usage"}
+              </div>
+            </div>
+            <div style={{fontSize:13,fontWeight:700,color:mcTvlColor,letterSpacing:1,whiteSpace:"nowrap",marginLeft:12}}>
+              {mcTvlLabel}
+            </div>
+          </div>
+        )}
+
+        {/* TVL trend */}
+        {(tvlPct7d||tvlPct30d)&&(
+          <div style={{display:"flex",gap:8,marginTop:8}}>
+            <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"6px 10px",textAlign:"center"}}>
+              <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:3}}>TVL 7D</div>
+              <div style={{fontSize:13,fontWeight:700,
+                color:tvlPct7d?parseFloat(tvlPct7d)>=0?C.green:C.red:C.greyDim}}>
+                {tvlPct7d?`${parseFloat(tvlPct7d)>=0?"+":""}${tvlPct7d}%`:"---"}
+              </div>
+            </div>
+            <div style={{flex:1,background:C.bgDeep,border:`1px solid ${C.border}`,padding:"6px 10px",textAlign:"center"}}>
+              <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:3}}>TVL 30D</div>
+              <div style={{fontSize:13,fontWeight:700,
+                color:tvlPct30d?parseFloat(tvlPct30d)>=0?C.green:C.red:C.greyDim}}>
+                {tvlPct30d?`${parseFloat(tvlPct30d)>=0?"+":""}${tvlPct30d}%`:"---"}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fees & Revenue */}
@@ -675,7 +736,7 @@ function ProtocolCard({ symbol, data, loading }) {
         </div>
       )}
 
-      {/* Revenue trend indicator */}
+      {/* Revenue trend */}
       {data?.fees30d&&data?.fees7d&&(
         <div style={{
           fontSize:11,padding:"6px 10px",letterSpacing:1,
@@ -689,8 +750,16 @@ function ProtocolCard({ symbol, data, loading }) {
         </div>
       )}
 
+      {/* Protocol note for non-standard models */}
+      {note&&(
+        <div style={{fontSize:10,color:C.greyDim,letterSpacing:0.5,lineHeight:1.6,
+          padding:"8px 10px",border:`1px solid ${C.border}`,background:C.bgDeep}}>
+          ◦ NOTE: {note}
+        </div>
+      )}
+
       {/* No data fallback */}
-      {!loading&&!data?.tvl&&(
+      {!loading&&!data?.tvl&&!data?.fees24h&&(
         <div style={{fontSize:11,color:C.greyDim,letterSpacing:1,padding:"10px",
           border:`1px solid ${C.border}`,textAlign:"center"}}>
           ◦ LIMITED ON-CHAIN DATA AVAILABLE
