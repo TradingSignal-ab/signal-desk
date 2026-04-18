@@ -205,11 +205,12 @@ function fmtEMA(e, type) {
 }
 
 function fmtUSD(n) {
-  if (!n && n !== 0) return "---";
-  if (n >= 1e9) return `$${(n/1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n/1e6).toFixed(2)}M`;
-  if (n >= 1e3) return `$${(n/1e3).toFixed(1)}K`;
-  return `$${n.toFixed(0)}`;
+  const num = parseFloat(n);
+  if (n === null || n === undefined || isNaN(num)) return "---";
+  if (num >= 1e9) return `$${(num/1e9).toFixed(2)}B`;
+  if (num >= 1e6) return `$${(num/1e6).toFixed(2)}M`;
+  if (num >= 1e3) return `$${(num/1e3).toFixed(1)}K`;
+  return `$${num.toFixed(0)}`;
 }
 
 function fmtPct(a, b) {
