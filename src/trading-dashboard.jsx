@@ -734,6 +734,44 @@ function ProtocolCard({ symbol, data, loading }) {
         </div>
       )}
 
+      {/* DEX Volume */}
+      {(data?.dexVolume24h||data?.dexVolume7d)&&(
+        <div>
+          <div style={{fontSize:10,color:C.grey,letterSpacing:2,marginBottom:6}}>DEX VOLUME</div>
+          <div style={{display:"flex",gap:8}}>
+            {[
+              {label:"24H",val:data?.dexVolume24h},
+              {label:"7D", val:data?.dexVolume7d},
+              {label:"30D",val:data?.dexVolume30d},
+            ].filter(x=>x.val).map(({label,val})=>(
+              <div key={label} style={{flex:1,background:C.bgDeep,
+                border:`1px solid ${C.borderBright}`,padding:"6px 8px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:C.grey,letterSpacing:1,marginBottom:3}}>{label}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.cyan}}>{fmtUSD(val)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Addresses */}
+      {data?.activeAddrs24h&&(
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+          padding:"7px 10px",background:`${C.cyan}08`,border:`1px solid ${C.cyan}33`}}>
+          <div>
+            <div style={{fontSize:10,color:C.grey,letterSpacing:1,marginBottom:2}}>ACTIVE ADDRESSES 24H</div>
+            <div style={{fontSize:9,color:C.greyDim,letterSpacing:0.5}}>Unique wallets that transacted today</div>
+          </div>
+          <div style={{fontSize:15,fontWeight:700,color:C.cyan,letterSpacing:1}}>
+            {data.activeAddrs24h >= 1e6
+              ? `${(data.activeAddrs24h/1e6).toFixed(2)}M`
+              : data.activeAddrs24h >= 1e3
+              ? `${(data.activeAddrs24h/1e3).toFixed(1)}K`
+              : data.activeAddrs24h.toLocaleString()}
+          </div>
+        </div>
+      )}
+
       {/* Revenue trend */}
       {data?.fees30d&&data?.fees7d&&(
         <div style={{
